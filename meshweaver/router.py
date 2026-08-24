@@ -9,6 +9,8 @@ from .protocol import (
     ERROR,
 )
 
+from .security import validate_message
+
 
 class Router:
     """Routes MeshWeaver messages to the appropriate handler."""
@@ -24,8 +26,13 @@ class Router:
         }
 
     def route(self, message: Message) -> Message | None:
-        """Route an incoming message to the correct handler."""
+        """Validate and route an incoming message."""
 
+        # Validate message before processing
+        if not validate_message(message):
+            return self.handle_unknown(message)
+
+        # Find appropriate handler
         handler = self.handlers.get(message.type)
 
         if handler is None:
@@ -46,9 +53,11 @@ class Router:
         )
 
     def handle_task(self, message: Message) -> Message:
-        """Handle TASK.
+        """
+        Handle TASK message.
 
-        The real executor will be connected later.
+        The actual task deserialization and execution
+        will be connected to Kalishweri's executor later.
         """
 
         return Message(
@@ -61,23 +70,23 @@ class Router:
         )
 
     def handle_result(self, message: Message) -> Message:
-        """Handle task result."""
+        """Handle a task result."""
 
         return message
 
     def handle_error(self, message: Message) -> Message:
-        """Handle error message."""
+        """Handle an error message."""
 
         return message
 
     def handle_unknown(self, message: Message) -> Message:
-        """Handle unsupported message types."""
+        """Handle an unsupported or invalid message."""
 
         return Message(
             type=ERROR,
             sender=self.node_id,
             receiver=message.sender,
             payload={
-                "error": f"Unknown message type: {message.type}",
+                "error": f"Unknown or invalid message type: {message.type}",
             },
         )
